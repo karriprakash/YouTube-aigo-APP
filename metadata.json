@@ -1,0 +1,6 @@
+{
+  "name": "OmniVideo",
+  "description": "AI-powered video generation, multi-format editing, multilingual summarization in Telugu/English, and social export for YouTube, Instagram, and TikTok with offline access.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
