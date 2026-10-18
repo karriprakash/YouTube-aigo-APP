@@ -10,17 +10,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.CredentialManager
+import com.example.auth.GoogleAuthUtil
 import com.example.firebase.configureAppCheck
+import com.example.ui.screens.AuthScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.VideoEditorScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.MainViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 
 sealed interface AppScreen {
     data object Home : AppScreen
@@ -54,34 +63,68 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppContent(viewModel: MainViewModel) {
-    val activeProject by viewModel.activeProject.collectAsState()
-    var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Home) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val credentialManager = remember { CredentialManager.create(context) }
+    var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
 
-    Crossfade(
-        targetState = if (activeProject != null && currentScreen == AppScreen.Editor) AppScreen.Editor else AppScreen.Home,
-        label = "screen_transition"
-    ) { screen ->
-        when (screen) {
-            AppScreen.Home -> {
-                HomeScreen(
-                    viewModel = viewModel,
-                    onOpenProject = { project ->
-                        viewModel.selectProject(project)
-                        currentScreen = AppScreen.Editor
-                    }
-                )
+    DisposableEffect(Unit) {
+        val listener = FirebaseAuth.AuthStateListener { auth ->
+            currentUser = auth.currentUser
+        }
+        Firebase.auth.addAuthStateListener(listener)
+        onDispose {
+            Firebase.auth.removeAuthStateListener(listener)
+        }
+    }
+
+    if (currentUser == null) {
+        AuthScreen(
+            onAuthSuccess = {
+                currentUser = Firebase.auth.currentUser
             }
-            AppScreen.Editor -> {
-                activeProject?.let { project ->
-                    VideoEditorScreen(
+        )
+    } else {
+        val activeProject by viewModel.activeProject.collectAsState()
+        var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Home) }
+
+        Crossfade(
+            targetState = if (activeProject != null && currentScreen == AppScreen.Editor) AppScreen.Editor else AppScreen.Home,
+            label = "screen_transition"
+        ) { screen ->
+            when (screen) {
+                AppScreen.Home -> {
+                    HomeScreen(
                         viewModel = viewModel,
-                        project = project,
-                        onNavigateBack = {
-                            currentScreen = AppScreen.Home
+                        user = currentUser,
+                        onSignOut = {
+                            GoogleAuthUtil.signOut(
+                                context = context,
+                                credentialManager = credentialManager,
+                                onSignOutComplete = {
+                                    currentUser = null
+                                },
+                                scope = scope
+                            )
+                        },
+                        onOpenProject = { project ->
+                            viewModel.selectProject(project)
+                            currentScreen = AppScreen.Editor
                         }
                     )
-                } ?: run {
-                    currentScreen = AppScreen.Home
+                }
+                AppScreen.Editor -> {
+                    activeProject?.let { project ->
+                        VideoEditorScreen(
+                            viewModel = viewModel,
+                            project = project,
+                            onNavigateBack = {
+                                currentScreen = AppScreen.Home
+                            }
+                        )
+                    } ?: run {
+                        currentScreen = AppScreen.Home
+                    }
                 }
             }
         }

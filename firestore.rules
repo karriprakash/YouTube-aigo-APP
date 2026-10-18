@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Security Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for UserVideoProject
+    function isValidUserVideoProject(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.videoUri is string && data.videoUri.size() <= 2000 &&
+             (!('audioUri' in data) || data.audioUri == null || (data.audioUri is string && data.audioUri.size() <= 2000)) &&
+             data.originalDurationMs is int && data.originalDurationMs >= 1000 &&
+             data.trimStartMs is int && data.trimStartMs >= 0 &&
+             data.trimEndMs is int && data.trimEndMs >= data.trimStartMs &&
+             data.aspectRatio is string && data.aspectRatio in ['16:9', '9:16', '1:1', '4:5'] &&
+             (!('colorFilter' in data) || (data.colorFilter is string && data.colorFilter.size() <= 50)) &&
+             (!('filterIntensity' in data) || data.filterIntensity is number) &&
+             (!('originalAudioVolume' in data) || data.originalAudioVolume is number) &&
+             (!('isOriginalAudioMuted' in data) || data.isOriginalAudioMuted is bool) &&
+             (!('voiceoverVolume' in data) || data.voiceoverVolume is number) &&
+             (!('voiceClarityEnhanced' in data) || data.voiceClarityEnhanced is bool) &&
+             (!('overlayText' in data) || (data.overlayText is string && data.overlayText.size() <= 500)) &&
+             (!('overlayTextColorHex' in data) || (data.overlayTextColorHex is string && data.overlayTextColorHex.size() <= 20)) &&
+             (!('overlayTextBgStyle' in data) || (data.overlayTextBgStyle is string && data.overlayTextBgStyle.size() <= 50)) &&
+             (!('overlayTextPosition' in data) || (data.overlayTextPosition is string && data.overlayTextPosition.size() <= 50)) &&
+             (!('overlayTextSize' in data) || data.overlayTextSize is int) &&
+             (!('language' in data) || (data.language is string && data.language.size() <= 10)) &&
+             (!('rawTopicNotes' in data) || (data.rawTopicNotes is string && data.rawTopicNotes.size() <= 5000)) &&
+             (!('aiSummaryEn' in data) || data.aiSummaryEn == null || (data.aiSummaryEn is string && data.aiSummaryEn.size() <= 5000)) &&
+             (!('aiSummaryTe' in data) || data.aiSummaryTe == null || (data.aiSummaryTe is string && data.aiSummaryTe.size() <= 5000)) &&
+             (!('youtubeTitle' in data) || data.youtubeTitle == null || (data.youtubeTitle is string && data.youtubeTitle.size() <= 500)) &&
+             (!('youtubeDescription' in data) || data.youtubeDescription == null || (data.youtubeDescription is string && data.youtubeDescription.size() <= 5000)) &&
+             (!('youtubeChapters' in data) || data.youtubeChapters == null || (data.youtubeChapters is string && data.youtubeChapters.size() <= 2000)) &&
+             (!('instagramCaption' in data) || data.instagramCaption == null || (data.instagramCaption is string && data.instagramCaption.size() <= 3000)) &&
+             (!('instagramHashtags' in data) || data.instagramHashtags == null || (data.instagramHashtags is string && data.instagramHashtags.size() <= 1500)) &&
+             (!('tiktokHook' in data) || data.tiktokHook == null || (data.tiktokHook is string && data.tiktokHook.size() <= 500)) &&
+             (!('tiktokCaptions' in data) || data.tiktokCaptions == null || (data.tiktokCaptions is string && data.tiktokCaptions.size() <= 2000)) &&
+             (!('brollSuggestions' in data) || data.brollSuggestions == null || (data.brollSuggestions is string && data.brollSuggestions.size() <= 3000)) &&
+             (!('isExported' in data) || data.isExported is bool);
+    }
+
+    // Validation for UserMediaAsset
+    function isValidUserMediaAsset(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+             data.type is string && data.type in ['VIDEO', 'AUDIO', 'VOICEOVER'] &&
+             data.uri is string && data.uri.size() <= 2000 &&
+             data.durationMs is int && data.durationMs >= 1000 &&
+             (!('language' in data) || (data.language is string && data.language.size() <= 10)) &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
+             (!('sampleTopic' in data) || (data.sampleTopic is string && data.sampleTopic.size() <= 200));
+    }
+
+    // User Projects Collection
+    match /users/{userId}/projects/{projectId} {
+      allow get, list: if isOwner(userId);
+
+      allow create: if isOwner(userId) && isValidId(projectId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'title', 'videoUri', 'originalDurationMs', 'trimStartMs', 'trimEndMs', 'aspectRatio', 'createdAt', 'updatedAt']) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserVideoProject(incoming());
+
+      allow update: if isOwner(userId) && isValidId(projectId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserVideoProject(incoming());
+
+      allow delete: if isOwner(userId) && isValidId(projectId);
+    }
+
+    // User Media Assets Collection
+    match /users/{userId}/assets/{assetId} {
+      allow get, list: if isOwner(userId);
+
+      allow create: if isOwner(userId) && isValidId(assetId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'name', 'type', 'uri', 'durationMs', 'createdAt', 'updatedAt']) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserMediaAsset(incoming());
+
+      allow update: if isOwner(userId) && isValidId(assetId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserMediaAsset(incoming());
+
+      allow delete: if isOwner(userId) && isValidId(assetId);
+    }
+  }
+}

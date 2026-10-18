@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,6 +78,8 @@ import com.example.viewmodel.MainViewModel
 @Composable
 fun HomeScreen(
     viewModel: MainViewModel,
+    user: com.google.firebase.auth.FirebaseUser?,
+    onSignOut: () -> Unit,
     onOpenProject: (VideoProject) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -87,6 +90,7 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedHomeTab by remember { mutableIntStateOf(0) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showAccountDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(userMessage) {
         userMessage?.let {
@@ -153,25 +157,36 @@ fun HomeScreen(
                 actions = {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0x3310B981),
-                        modifier = Modifier.padding(end = 12.dp)
+                        color = Color(0xFF1E293B),
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { showAccountDialog = true }
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.OfflinePin,
-                                contentDescription = null,
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonIndigo),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = user?.email?.take(1)?.uppercase() ?: "U",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                            Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "Offline Ready",
+                                text = "Account",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF10B981)
+                                color = Color.White
                             )
                         }
                     }
@@ -321,6 +336,77 @@ fun HomeScreen(
             onCreate = { title, duration, lang, notes ->
                 viewModel.createBlankProject(title, duration, lang, notes)
                 viewModel.activeProject.value?.let { onOpenProject(it) }
+            }
+        )
+    }
+
+    if (showAccountDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showAccountDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(NeonIndigo),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = user?.email?.take(1)?.uppercase() ?: "U",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text("Account Profile", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Signed in with Google:",
+                        fontSize = 12.sp,
+                        color = Color(0xFF94A3B8)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = user?.email ?: "Unknown User",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF1E2433),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text("Cloud Status: Synced", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                            Text("Your projects and drafts are backed up with Firebase zero-trust security.", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        showAccountDialog = false
+                        onSignOut()
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFEF4444)
+                    )
+                ) {
+                    Text("Sign Out", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showAccountDialog = false }) {
+                    Text("Close")
+                }
             }
         )
     }

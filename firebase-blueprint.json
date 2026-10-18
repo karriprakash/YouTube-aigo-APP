@@ -1,0 +1,226 @@
+{
+  "entities": {
+    "UserVideoProject": {
+      "title": "UserVideoProject",
+      "description": "Video composition project storing editing state, media URIs, trim boundaries, filters, and AI summaries",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the project owner"
+        },
+        "title": {
+          "type": "string",
+          "description": "User title of the video project"
+        },
+        "videoUri": {
+          "type": "string",
+          "description": "URI or path identifier of the primary video track"
+        },
+        "audioUri": {
+          "type": "string",
+          "description": "Optional URI of the secondary audio track or voiceover"
+        },
+        "originalDurationMs": {
+          "type": "integer",
+          "description": "Original raw footage duration in milliseconds"
+        },
+        "trimStartMs": {
+          "type": "integer",
+          "description": "Timeline start trim boundary in milliseconds"
+        },
+        "trimEndMs": {
+          "type": "integer",
+          "description": "Timeline end trim boundary in milliseconds"
+        },
+        "aspectRatio": {
+          "type": "string",
+          "enum": ["16:9", "9:16", "1:1", "4:5"],
+          "description": "Target aspect ratio for social media platforms"
+        },
+        "colorFilter": {
+          "type": "string",
+          "description": "Color filter preset name"
+        },
+        "filterIntensity": {
+          "type": "number",
+          "description": "Filter intensity from 0.0 to 1.0"
+        },
+        "originalAudioVolume": {
+          "type": "number",
+          "description": "Volume level of original audio track"
+        },
+        "isOriginalAudioMuted": {
+          "type": "boolean",
+          "description": "Whether original audio track is muted"
+        },
+        "voiceoverVolume": {
+          "type": "number",
+          "description": "Volume level of voiceover audio track"
+        },
+        "voiceClarityEnhanced": {
+          "type": "boolean",
+          "description": "Whether AI vocal enhancement is active"
+        },
+        "overlayText": {
+          "type": "string",
+          "description": "On-screen text overlay content"
+        },
+        "overlayTextColorHex": {
+          "type": "string",
+          "description": "Text overlay color hex string"
+        },
+        "overlayTextBgStyle": {
+          "type": "string",
+          "description": "Background style badge for text overlay"
+        },
+        "overlayTextPosition": {
+          "type": "string",
+          "description": "Position of text overlay (TOP, CENTER, BOTTOM)"
+        },
+        "overlayTextSize": {
+          "type": "integer",
+          "description": "Font size for text overlay"
+        },
+        "language": {
+          "type": "string",
+          "description": "Audio language code (te, en, auto)"
+        },
+        "rawTopicNotes": {
+          "type": "string",
+          "description": "Raw topic notes or dialogue transcript"
+        },
+        "aiSummaryEn": {
+          "type": "string",
+          "description": "Generated video content summary in English"
+        },
+        "aiSummaryTe": {
+          "type": "string",
+          "description": "Generated video content summary in Telugu"
+        },
+        "youtubeTitle": {
+          "type": "string",
+          "description": "Generated YouTube SEO title"
+        },
+        "youtubeDescription": {
+          "type": "string",
+          "description": "Generated YouTube description with chapters"
+        },
+        "youtubeChapters": {
+          "type": "string",
+          "description": "Generated YouTube chapters breakdown"
+        },
+        "instagramCaption": {
+          "type": "string",
+          "description": "Generated Instagram caption"
+        },
+        "instagramHashtags": {
+          "type": "string",
+          "description": "Generated Instagram hashtags"
+        },
+        "tiktokHook": {
+          "type": "string",
+          "description": "Generated TikTok opening hook"
+        },
+        "tiktokCaptions": {
+          "type": "string",
+          "description": "Generated TikTok short caption"
+        },
+        "brollSuggestions": {
+          "type": "string",
+          "description": "Suggested B-roll and cut timings"
+        },
+        "isExported": {
+          "type": "boolean",
+          "description": "Whether the project has been finalized for export"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp. Must be FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp. Must be FieldValue.serverTimestamp()"
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "videoUri",
+        "originalDurationMs",
+        "trimStartMs",
+        "trimEndMs",
+        "aspectRatio",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserMediaAsset": {
+      "title": "UserMediaAsset",
+      "description": "Raw audio or video media asset owned by a user",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner"
+        },
+        "name": {
+          "type": "string",
+          "description": "File or track name"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["VIDEO", "AUDIO", "VOICEOVER"],
+          "description": "Type of media"
+        },
+        "uri": {
+          "type": "string",
+          "description": "Local URI or asset reference"
+        },
+        "durationMs": {
+          "type": "integer",
+          "description": "Duration in milliseconds"
+        },
+        "language": {
+          "type": "string",
+          "description": "Spoken language code (te, en)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Notes or transcript description"
+        },
+        "sampleTopic": {
+          "type": "string",
+          "description": "Category or topic"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp. Must be FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp. Must be FieldValue.serverTimestamp()"
+        }
+      },
+      "required": ["userId", "name", "type", "uri", "durationMs", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/projects/{projectId}": {
+      "schema": {
+        "$ref": "#/entities/UserVideoProject"
+      },
+      "description": "User video editing projects and generated social assets"
+    },
+    "/users/{userId}/assets/{assetId}": {
+      "schema": {
+        "$ref": "#/entities/UserMediaAsset"
+      },
+      "description": "Raw video and audio creative assets owned by user"
+    }
+  }
+}
