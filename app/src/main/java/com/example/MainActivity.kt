@@ -66,7 +66,11 @@ fun AppContent(viewModel: MainViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val credentialManager = remember { CredentialManager.create(context) }
+    val prefs = remember { context.getSharedPreferences("omnivideo_prefs", android.content.Context.MODE_PRIVATE) }
     var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
+    var hasChosenGuestMode by remember {
+        mutableStateOf(prefs.getBoolean("has_chosen_guest_mode", false))
+    }
 
     DisposableEffect(Unit) {
         val listener = FirebaseAuth.AuthStateListener { auth ->
@@ -78,10 +82,15 @@ fun AppContent(viewModel: MainViewModel) {
         }
     }
 
-    if (currentUser == null) {
+    if (currentUser == null && !hasChosenGuestMode) {
         AuthScreen(
             onAuthSuccess = {
                 currentUser = Firebase.auth.currentUser
+                prefs.edit().putBoolean("has_chosen_guest_mode", true).apply()
+            },
+            onContinueAsGuest = {
+                hasChosenGuestMode = true
+                prefs.edit().putBoolean("has_chosen_guest_mode", true).apply()
             }
         )
     } else {
@@ -97,12 +106,26 @@ fun AppContent(viewModel: MainViewModel) {
                     HomeScreen(
                         viewModel = viewModel,
                         user = currentUser,
+                        onRequestSignIn = {
+                            GoogleAuthUtil.onGoogleSignInClicked(
+                                context = context,
+                                credentialManager = credentialManager,
+                                onAuthSuccess = {
+                                    currentUser = Firebase.auth.currentUser
+                                    prefs.edit().putBoolean("has_chosen_guest_mode", true).apply()
+                                },
+                                onAuthError = { /* logged in GoogleAuthUtil */ },
+                                scope = scope
+                            )
+                        },
                         onSignOut = {
                             GoogleAuthUtil.signOut(
                                 context = context,
                                 credentialManager = credentialManager,
                                 onSignOutComplete = {
                                     currentUser = null
+                                    hasChosenGuestMode = true
+                                    prefs.edit().putBoolean("has_chosen_guest_mode", true).apply()
                                 },
                                 scope = scope
                             )

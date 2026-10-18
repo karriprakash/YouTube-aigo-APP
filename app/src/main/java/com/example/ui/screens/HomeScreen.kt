@@ -27,9 +27,12 @@ import androidx.compose.material.icons.filled.OfflinePin
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.VideoCameraBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -79,6 +82,7 @@ import com.example.viewmodel.MainViewModel
 fun HomeScreen(
     viewModel: MainViewModel,
     user: com.google.firebase.auth.FirebaseUser?,
+    onRequestSignIn: () -> Unit = {},
     onSignOut: () -> Unit,
     onOpenProject: (VideoProject) -> Unit,
     modifier: Modifier = Modifier
@@ -156,38 +160,66 @@ fun HomeScreen(
                 },
                 actions = {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = Color(0xFF1E293B),
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 1.dp,
+                            color = if (user == null) SunsetAmber else NeonIndigo
+                        ),
                         modifier = Modifier
                             .padding(end = 12.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .clickable { showAccountDialog = true }
+                            .testTag("account_chip_btn")
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clip(CircleShape)
-                                    .background(NeonIndigo),
-                                contentAlignment = Alignment.Center
-                            ) {
+                            if (user != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clip(CircleShape)
+                                        .background(NeonIndigo),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = user.email?.take(1)?.uppercase() ?: "U",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                                Spacer(Modifier.width(6.dp))
                                 Text(
-                                    text = user?.email?.take(1)?.uppercase() ?: "U",
+                                    text = "Account",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.PlayCircle,
+                                    contentDescription = null,
+                                    tint = SunsetAmber,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(5.dp))
+                                Text(
+                                    text = "Try Mode",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = "• Sign In",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = NeonCyan
+                                )
                             }
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = "Account",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
                         }
                     }
                 },
@@ -261,6 +293,65 @@ fun HomeScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 if (selectedHomeTab == 0) {
+                    if (user == null) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .testTag("try_mode_banner"),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF131E31)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2563EB))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(SunsetAmber.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayCircle,
+                                        contentDescription = null,
+                                        tint = SunsetAmber,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Studio Try Mode (Offline Access)",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "All tools unlocked. Trim, audio mix, Telugu AI summaries & export freely! Sign in with Google anytime to back up.",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF94A3B8)
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Button(
+                                    onClick = onRequestSignIn,
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White,
+                                        contentColor = Color(0xFF0F172A)
+                                    ),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                    modifier = Modifier.testTag("try_banner_signin_btn")
+                                ) {
+                                    Text("Sign In", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
                     // Feature Banner
                     Card(
                         modifier = Modifier
@@ -349,63 +440,112 @@ fun HomeScreen(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(NeonIndigo),
+                            .background(if (user != null) NeonIndigo else SunsetAmber),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = user?.email?.take(1)?.uppercase() ?: "U",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        if (user != null) {
+                            Text(
+                                text = user.email?.take(1)?.uppercase() ?: "U",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        } else {
+                            Icon(Icons.Default.PlayCircle, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                        }
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text("Account Profile", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (user != null) "Account Profile" else "Studio Try Mode",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             text = {
                 Column {
-                    Text(
-                        text = "Signed in with Google:",
-                        fontSize = 12.sp,
-                        color = Color(0xFF94A3B8)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = user?.email ?: "Unknown User",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF1E2433),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Text("Cloud Status: Synced", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
-                            Text("Your projects and drafts are backed up with Firebase zero-trust security.", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                    if (user != null) {
+                        Text(
+                            text = "Signed in with Google:",
+                            fontSize = 12.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = user.email ?: "Unknown User",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFF1E2433),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text("Cloud Status: Synced", fontSize = 11.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+                                Text("Your projects and drafts are backed up with Firebase zero-trust security.", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "Currently Using OmniVideo in Try Mode",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "You have full access to video trimming, text overlays, audio levels, color filters, Telugu AI summaries, and social exports saved locally on this device.",
+                            fontSize = 12.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFF1E2433),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text("Local Storage: Active (Room Database)", fontSize = 11.sp, color = SunsetAmber, fontWeight = FontWeight.Bold)
+                                Text("Sign in with Google anytime to back up projects to cloud and sync across devices.", fontSize = 11.sp, color = Color(0xFFCBD5E1))
+                            }
                         }
                     }
                 }
             },
             confirmButton = {
-                androidx.compose.material3.Button(
-                    onClick = {
-                        showAccountDialog = false
-                        onSignOut()
-                    },
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFEF4444)
-                    )
-                ) {
-                    Text("Sign Out", fontWeight = FontWeight.Bold)
+                if (user != null) {
+                    androidx.compose.material3.Button(
+                        onClick = {
+                            showAccountDialog = false
+                            onSignOut()
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFEF4444)
+                        )
+                    ) {
+                        Text("Sign Out", fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    androidx.compose.material3.Button(
+                        onClick = {
+                            showAccountDialog = false
+                            onRequestSignIn()
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = Color(0xFF0F172A)
+                        ),
+                        modifier = Modifier.testTag("dialog_signin_btn")
+                    ) {
+                        Text("Sign in with Google", fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { showAccountDialog = false }) {
-                    Text("Close")
+                    Text(if (user != null) "Close" else "Keep Trying Offline")
                 }
             }
         )

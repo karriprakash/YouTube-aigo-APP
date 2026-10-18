@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Button
@@ -28,6 +29,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,6 +58,7 @@ import com.example.ui.theme.SunsetAmber
 @Composable
 fun AuthScreen(
     onAuthSuccess: () -> Unit,
+    onContinueAsGuest: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -80,6 +83,25 @@ fun AuthScreen(
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Top Skip / Try Immediately Action Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopEnd)
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            OutlinedButton(
+                onClick = onContinueAsGuest,
+                modifier = Modifier.testTag("skip_to_try_btn"),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f))
+            ) {
+                Text("Try Studio Directly ➔", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -121,7 +143,7 @@ fun AuthScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
 
             // Value Proposition Highlights Card
             Card(
@@ -155,34 +177,111 @@ fun AuthScreen(
                     FeatureRow(
                         icon = Icons.Default.CloudDone,
                         iconTint = Color(0xFF10B981),
-                        title = "Cloud Sync & Offline Access",
-                        subtitle = "Drafts saved on device and synced with Firestore"
+                        title = "Offline Access & Local Drafts",
+                        subtitle = "Full editing and export without account requirement"
                     )
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(20.dp))
 
             if (errorMessage != null) {
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = Color(0x33EF4444),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = 14.dp)
                 ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = errorMessage ?: "",
+                            color = Color(0xFFFCA5A5),
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = onContinueAsGuest,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = SunsetAmber,
+                                contentColor = Color.Black
+                            ),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                            modifier = Modifier.testTag("error_fallback_try_btn")
+                        ) {
+                            Text("Skip & Try OmniVideo Studio ➔", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            // PRIMARY HERO BUTTON: Give It a Try (Unblocked instant access)
+            Button(
+                onClick = onContinueAsGuest,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .testTag("give_a_try_button"),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = NeonIndigo,
+                    contentColor = Color.White
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = SunsetAmber,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(horizontalAlignment = Alignment.Start) {
                     Text(
-                        text = errorMessage ?: "",
-                        color = Color(0xFFFCA5A5),
-                        fontSize = 12.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(10.dp)
+                        text = "Give It a Try (Instant Access)",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "No login needed • Full offline video editor & Telugu AI",
+                        fontSize = 10.sp,
+                        color = Color(0xFFE0E7FF)
                     )
                 }
             }
 
-            // Visible "Sign in with Google" Button
+            Spacer(Modifier.height(12.dp))
+
+            // Divider
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+            ) {
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = Color(0xFF334155)
+                )
+                Text(
+                    text = "  OR CONNECT GOOGLE  ",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF94A3B8)
+                )
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = Color(0xFF334155)
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // "Sign in with Google" Button (Secondary / optional sync)
             Button(
                 onClick = {
                     isLoading = true
@@ -207,7 +306,7 @@ fun AuthScreen(
                 enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(48.dp)
                     .testTag("google_sign_in_button"),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -217,28 +316,28 @@ fun AuthScreen(
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(20.dp),
                         color = Color(0xFF0F172A),
                         strokeWidth = 2.dp
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text("Signing in...", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text("Connecting...", fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 } else {
-                    Text("G", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF4285F4))
+                    Text("G", fontSize = 17.sp, fontWeight = FontWeight.Black, color = Color(0xFF4285F4))
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        text = "Sign in with Google",
-                        fontSize = 15.sp,
+                        text = "Sign in with Google (Cloud Sync)",
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF0F172A)
                     )
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
 
             Text(
-                text = "Protected with Firebase zero-trust security",
+                text = "Drafts persist locally on device • Firebase cloud sync optional",
                 fontSize = 11.sp,
                 color = Color(0xFF64748B)
             )
