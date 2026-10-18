@@ -7,7 +7,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.ai.GeminiVideoAiService
 import com.example.ai.GeneratedSocialMediaKit
 import com.example.data.local.AppDatabase
+import com.example.data.model.AudioSourcePreset
 import com.example.data.model.MediaAsset
+import com.example.data.model.MediaSourceItem
+import com.example.data.model.TranscriptSegment
+import com.example.data.model.TranscriptionParser
 import com.example.data.model.UserVideoMetadata
 import com.example.data.model.VideoProject
 import com.example.data.repository.ProjectRepository
@@ -27,6 +31,8 @@ private const val TAG = "MainViewModel"
 enum class EditorTab(val title: String) {
     TRIM("Trim"),
     TEXT("Text Overlay"),
+    MEMES("Memes"),
+    MEDIA("Media Sources"),
     AUDIO("Audio Levels"),
     FILTERS("Filters"),
     FORMAT("Format"),
@@ -470,6 +476,154 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.insertUserVideo(metadata)
             _userMessage.value = "Saved '$title' to offline video vault"
         }
+    }
+
+    // --- Audio-to-Video & Transcription Suite ---
+
+    fun createProjectFromAudioSource(
+        title: String,
+        durationMs: Long,
+        language: String,
+        audioUri: String,
+        transcript: String,
+        segments: List<TranscriptSegment>,
+        aspectRatio: String = "9:16",
+        backgroundUri: String? = null,
+        backgroundType: String = "GRADIENT",
+        backgroundSource: String = "LOCAL"
+    ) {
+        viewModelScope.launch {
+            val validDuration = durationMs.coerceIn(5_000L, 120_000L)
+            val segmentsJson = TranscriptionParser.toJson(segments)
+            val newProject = VideoProject(
+                title = title.ifBlank { "Audio Story Reel" },
+                videoUri = "asset://audio_visualizer_base.mp4",
+                audioUri = audioUri,
+                originalDurationMs = validDuration,
+                trimStartMs = 0L,
+                trimEndMs = validDuration,
+                aspectRatio = aspectRatio,
+                language = language,
+                rawTopicNotes = transcript,
+                audioSourceUri = audioUri,
+                audioTranscript = transcript,
+                transcriptSegmentsJson = segmentsJson,
+                captionStyle = "POP_IN",
+                backgroundMediaUri = backgroundUri,
+                backgroundMediaType = backgroundType,
+                backgroundMediaSource = backgroundSource
+            )
+            val newId = repository.insertProject(newProject)
+            val inserted = newProject.copy(id = newId)
+            selectProject(inserted)
+            _userMessage.value = "Audio-to-Video project created with live transcription!"
+        }
+    }
+
+    fun updateTranscription(
+        transcript: String,
+        segmentsJson: String,
+        captionStyle: String
+    ) {
+        val current = _activeProject.value ?: return
+        val updated = current.copy(
+            audioTranscript = transcript,
+            transcriptSegmentsJson = segmentsJson,
+            captionStyle = captionStyle,
+            updatedAt = System.currentTimeMillis()
+        )
+        _activeProject.value = updated
+        persistProject(updated)
+        _userMessage.value = "Updated video transcription captions"
+    }
+
+    fun updateCaptionStyle(style: String) {
+        val current = _activeProject.value ?: return
+        val updated = current.copy(
+            captionStyle = style,
+            updatedAt = System.currentTimeMillis()
+        )
+        _activeProject.value = updated
+        persistProject(updated)
+    }
+
+    // --- Background Media Sourcing (Google Photos / Google Search / Social Media) ---
+
+    fun updateBackgroundMedia(
+        uri: String,
+        type: String, // "PHOTO", "VIDEO_CLIP", "GRADIENT"
+        source: String // "GOOGLE_PHOTOS", "GOOGLE_SEARCH", "SOCIAL_MEDIA", "LOCAL"
+    ) {
+        val current = _activeProject.value ?: return
+        val updated = current.copy(
+            backgroundMediaUri = uri,
+            backgroundMediaType = type,
+            backgroundMediaSource = source,
+            updatedAt = System.currentTimeMillis()
+        )
+        _activeProject.value = updated
+        persistProject(updated)
+        _userMessage.value = "Updated background from $source"
+    }
+
+    fun importMediaSourceAsAsset(item: MediaSourceItem) {
+        viewModelScope.launch {
+            val asset = MediaAsset(
+                name = item.title,
+                type = if (item.mediaType == "PHOTO") "IMAGE" else "VIDEO",
+                uri = item.sampleUri,
+                durationMs = if (item.mediaType == "PHOTO") 10_000L else 18_000L,
+                language = "te",
+                description = item.description,
+                sampleTopic = item.tags.joinToString(", ")
+            )
+            repository.insertAsset(asset)
+            _userMessage.value = "Imported '${item.title}' to Asset Library"
+        }
+    }
+
+    // --- Meme Integration & Overlays ---
+
+    fun updateProjectMeme(
+        memeId: String,
+        title: String,
+        topText: String,
+        bottomText: String,
+        imageUri: String? = null,
+        position: String = "BOTTOM_RIGHT",
+        startMs: Long = 0L,
+        endMs: Long = 30_000L
+    ) {
+        val current = _activeProject.value ?: return
+        val updated = current.copy(
+            activeMemeId = memeId,
+            memeTitle = title,
+            memeTopText = topText,
+            memeBottomText = bottomText,
+            memeImageUri = imageUri,
+            memePosition = position,
+            memeStartMs = startMs,
+            memeEndMs = endMs.coerceAtMost(current.originalDurationMs),
+            updatedAt = System.currentTimeMillis()
+        )
+        _activeProject.value = updated
+        persistProject(updated)
+        _userMessage.value = "Applied '$title' meme to video timeline!"
+    }
+
+    fun removeProjectMeme() {
+        val current = _activeProject.value ?: return
+        val updated = current.copy(
+            activeMemeId = null,
+            memeTitle = null,
+            memeTopText = null,
+            memeBottomText = null,
+            memeImageUri = null,
+            updatedAt = System.currentTimeMillis()
+        )
+        _activeProject.value = updated
+        persistProject(updated)
+        _userMessage.value = "Removed meme overlay from project"
     }
 
     private fun persistProject(project: VideoProject) {

@@ -67,12 +67,18 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.VideoLibrary
 import com.example.data.model.MediaAsset
-import com.example.data.model.VideoProject
+import com.example.data.model.MemeRepository
 import com.example.data.model.UserVideoMetadata
+import com.example.data.model.VideoProject
 import com.example.ui.components.AssetLibrarySection
+import com.example.ui.components.AudioToVideoDialog
 import com.example.ui.components.CreateProjectDialog
+import com.example.ui.components.HomeScreenMemeHub
+import com.example.ui.components.MemeStudioSection
 import com.example.ui.components.OfflineVideosSection
 import com.example.ui.components.ProjectsListSection
 import com.example.ui.theme.NeonCyan
@@ -98,6 +104,7 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedHomeTab by remember { mutableIntStateOf(0) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showAudioToVideoDialog by remember { mutableStateOf(false) }
     var showAccountDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(userMessage) {
@@ -233,14 +240,24 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showCreateDialog = true },
-                containerColor = NeonIndigo,
-                contentColor = Color.White,
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("New Video", fontWeight = FontWeight.Bold) },
-                modifier = Modifier.testTag("new_video_fab")
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ExtendedFloatingActionButton(
+                    onClick = { showAudioToVideoDialog = true },
+                    containerColor = Color(0xFF1E1B4B),
+                    contentColor = NeonCyan,
+                    icon = { Icon(Icons.Default.GraphicEq, contentDescription = null, tint = NeonCyan) },
+                    text = { Text("Audio to Video", fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.testTag("audio_to_video_fab")
+                )
+                ExtendedFloatingActionButton(
+                    onClick = { showCreateDialog = true },
+                    containerColor = NeonIndigo,
+                    contentColor = Color.White,
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("New Video", fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.testTag("new_video_fab")
+                )
+            }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -289,6 +306,18 @@ fun HomeScreen(
                 Tab(
                     selected = selectedHomeTab == 2,
                     onClick = { selectedHomeTab = 2 },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.EmojiEmotions, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Memes (${MemeRepository.templates.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    },
+                    modifier = Modifier.testTag("tab_memes")
+                )
+                Tab(
+                    selected = selectedHomeTab == 3,
+                    onClick = { selectedHomeTab = 3 },
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -412,6 +441,61 @@ fun HomeScreen(
                         }
                     }
 
+                    // Quick Action: Audio & Transcription Video Studio Banner
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .testTag("audio_studio_banner"),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF161533)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonIndigo)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonIndigo.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.GraphicEq,
+                                    contentDescription = null,
+                                    tint = NeonCyan,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Audio & Transcription Studio",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Turn voice or audio into video with live transcription & Google Photos backgrounds.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF94A3B8)
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = { showAudioToVideoDialog = true },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonIndigo),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.testTag("start_audio_video_btn")
+                            ) {
+                                Text("Create", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
                     Spacer(Modifier.height(6.dp))
 
                     ProjectsListSection(
@@ -423,6 +507,24 @@ fun HomeScreen(
                     OfflineVideosSection(
                         userVideos = userVideos,
                         onDeleteVideo = { viewModel.deleteUserVideo(it) }
+                    )
+                } else if (selectedHomeTab == 2) {
+                    HomeScreenMemeHub(
+                        onCreateProjectWithMeme = { meme ->
+                            viewModel.createBlankProject(
+                                title = "${meme.name} Reel",
+                                durationSec = 15,
+                                language = "te",
+                                notes = "${meme.defaultTopText} - ${meme.defaultBottomText}"
+                            )
+                            viewModel.updateProjectMeme(
+                                memeId = meme.id,
+                                title = meme.name,
+                                topText = meme.defaultTopText,
+                                bottomText = meme.defaultBottomText
+                            )
+                            viewModel.activeProject.value?.let { onOpenProject(it) }
+                        }
                     )
                 } else {
                     AssetLibrarySection(
@@ -447,6 +549,18 @@ fun HomeScreen(
             onDismiss = { showCreateDialog = false },
             onCreate = { title, duration, lang, notes ->
                 viewModel.createBlankProject(title, duration, lang, notes)
+                viewModel.activeProject.value?.let { onOpenProject(it) }
+            }
+        )
+    }
+
+    if (showAudioToVideoDialog) {
+        AudioToVideoDialog(
+            onDismiss = { showAudioToVideoDialog = false },
+            onCreateAudioVideoProject = { title, durationMs, lang, audioUri, transcript, segs, aspect, bgUri, bgType, bgSrc ->
+                viewModel.createProjectFromAudioSource(
+                    title, durationMs, lang, audioUri, transcript, segs, aspect, bgUri, bgType, bgSrc
+                )
                 viewModel.activeProject.value?.let { onOpenProject(it) }
             }
         )

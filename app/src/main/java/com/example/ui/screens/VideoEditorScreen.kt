@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.VolumeUp
@@ -53,6 +55,8 @@ import com.example.ui.components.AudioLevelsToolSection
 import com.example.ui.components.ExportShareSection
 import com.example.ui.components.FilterToolSection
 import com.example.ui.components.FormatToolSection
+import com.example.ui.components.MediaSourcingSection
+import com.example.ui.components.MemeStudioSection
 import com.example.ui.components.TextOverlayToolSection
 import com.example.ui.components.TrimToolSection
 import com.example.ui.components.VideoPreviewCanvas
@@ -167,6 +171,8 @@ fun VideoEditorScreen(
                     val tabIcon = when (tab) {
                         EditorTab.TRIM -> Icons.Default.ContentCut
                         EditorTab.TEXT -> Icons.Default.Title
+                        EditorTab.MEMES -> Icons.Default.EmojiEmotions
+                        EditorTab.MEDIA -> Icons.Default.PhotoLibrary
                         EditorTab.AUDIO -> Icons.Default.VolumeUp
                         EditorTab.FILTERS -> Icons.Default.ColorLens
                         EditorTab.FORMAT -> Icons.Default.AspectRatio
@@ -213,6 +219,27 @@ fun VideoEditorScreen(
                         project = project,
                         onUpdateOverlay = { text, color, bg, pos, size ->
                             viewModel.updateTextOverlay(text, color, bg, pos, size)
+                        }
+                    )
+                }
+                EditorTab.MEMES -> {
+                    MemeStudioSection(
+                        project = project,
+                        currentPlayheadMs = currentPlayheadMs,
+                        onApplyMeme = { memeId, title, top, bottom, img, pos, start, end ->
+                            viewModel.updateProjectMeme(memeId, title, top, bottom, img, pos, start, end)
+                        },
+                        onRemoveMeme = { viewModel.removeProjectMeme() }
+                    )
+                }
+                EditorTab.MEDIA -> {
+                    MediaSourcingSection(
+                        project = project,
+                        onSetBackgroundMedia = { uri, type, source ->
+                            viewModel.updateBackgroundMedia(uri, type, source)
+                        },
+                        onImportAsset = { item ->
+                            viewModel.importMediaSourceAsAsset(item)
                         }
                     )
                 }

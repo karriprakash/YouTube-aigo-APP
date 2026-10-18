@@ -26,11 +26,13 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Badge
@@ -47,6 +49,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,10 +59,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.MemeRepository
+import com.example.data.model.TranscriptionParser
 import com.example.data.model.VideoProject
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonIndigo
@@ -203,6 +209,26 @@ fun VideoPreviewCanvas(
                                 )
                             }
 
+                            if (project.backgroundMediaUri != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xCC1E3A8A)
+                                ) {
+                                    Text(
+                                        text = when (project.backgroundMediaSource) {
+                                            "GOOGLE_PHOTOS" -> "📸 Google Photos"
+                                            "GOOGLE_SEARCH" -> "🔍 Google Search"
+                                            "SOCIAL_MEDIA" -> "📱 Social Media"
+                                            else -> "Media"
+                                        },
+                                        color = Color(0xFF93C5FD),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
                             if (project.colorFilter != "NORMAL") {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
@@ -290,6 +316,38 @@ fun VideoPreviewCanvas(
                                     modifier = Modifier.size(44.dp)
                                 )
                             }
+
+                            // Synced Transcription Subtitle Bubble
+                            val parsedSegments = remember(project.transcriptSegmentsJson) {
+                                TranscriptionParser.fromJson(project.transcriptSegmentsJson)
+                            }
+                            val activeSegment = parsedSegments.firstOrNull { seg ->
+                                currentPlayheadMs in seg.startMs..seg.endMs
+                            }
+
+                            if (activeSegment != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xEB000000),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.8f)),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Subtitles, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(12.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            text = activeSegment.text,
+                                            color = Color.White,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Customizable Text Overlay rendered right on canvas!
@@ -365,6 +423,75 @@ fun VideoPreviewCanvas(
                                             fontSize = (project.overlayTextSize * 0.75f).sp,
                                             fontWeight = FontWeight.Bold,
                                             textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Active Meme Overlay
+                    if (project.activeMemeId != null &&
+                        ((project.memeStartMs == 0L && project.memeEndMs == 0L) ||
+                         (currentPlayheadMs in project.memeStartMs..project.memeEndMs))
+                    ) {
+                        val memeTemplate = remember(project.activeMemeId) {
+                            MemeRepository.templates.firstOrNull { it.id == project.activeMemeId }
+                        }
+                        val memeAlign = when (project.memePosition) {
+                            "TOP_RIGHT" -> Alignment.TopEnd
+                            "CENTER" -> Alignment.Center
+                            "FULL_OVERLAY" -> Alignment.Center
+                            else -> Alignment.BottomEnd
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp),
+                            contentAlignment = memeAlign
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(memeTemplate?.bgGradientHex?.first ?: 0xE61E293B),
+                                border = androidx.compose.foundation.BorderStroke(1.5.dp, SunsetAmber),
+                                modifier = Modifier
+                                    .width(if (project.memePosition == "FULL_OVERLAY") 180.dp else 105.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    if (!project.memeTopText.isNullOrBlank()) {
+                                        Text(
+                                            text = project.memeTopText.uppercase(),
+                                            color = Color.White,
+                                            fontSize = 7.sp,
+                                            fontWeight = FontWeight.Black,
+                                            fontFamily = FontFamily.SansSerif,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            modifier = Modifier
+                                                .background(Color(0xB3000000), RoundedCornerShape(2.dp))
+                                                .padding(horizontal = 2.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = memeTemplate?.emoji ?: "🎭",
+                                        fontSize = if (project.memePosition == "FULL_OVERLAY") 28.sp else 18.sp
+                                    )
+                                    if (!project.memeBottomText.isNullOrBlank()) {
+                                        Text(
+                                            text = project.memeBottomText.uppercase(),
+                                            color = Color.White,
+                                            fontSize = 7.sp,
+                                            fontWeight = FontWeight.Black,
+                                            fontFamily = FontFamily.SansSerif,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            modifier = Modifier
+                                                .background(Color(0xB3000000), RoundedCornerShape(2.dp))
+                                                .padding(horizontal = 2.dp, vertical = 1.dp)
                                         )
                                     }
                                 }

@@ -39,7 +39,25 @@ data class VideoProject(
     val tiktokHook: String? = null,
     val tiktokCaptions: String? = null,
     val brollSuggestions: String? = null,
-    val isExported: Boolean = false
+    val isExported: Boolean = false,
+    // Audio source & transcription
+    val audioSourceUri: String? = null,
+    val audioTranscript: String? = null,
+    val transcriptSegmentsJson: String? = null,
+    val captionStyle: String = "POP_IN", // "POP_IN", "KARAOKE", "CINEMATIC", "MINIMAL"
+    // Background media sourcing (Google Photos / Google Search / Social Media)
+    val backgroundMediaUri: String? = null,
+    val backgroundMediaType: String = "GRADIENT", // "GRADIENT", "PHOTO", "VIDEO_CLIP"
+    val backgroundMediaSource: String = "LOCAL", // "LOCAL", "GOOGLE_PHOTOS", "GOOGLE_SEARCH", "SOCIAL_MEDIA"
+    // Meme integration
+    val activeMemeId: String? = null,
+    val memeTitle: String? = null,
+    val memeImageUri: String? = null,
+    val memeTopText: String? = null,
+    val memeBottomText: String? = null,
+    val memePosition: String = "BOTTOM_RIGHT", // "CENTER", "TOP_RIGHT", "BOTTOM_RIGHT", "FULL_OVERLAY"
+    val memeStartMs: Long = 0L,
+    val memeEndMs: Long = 30_000L
 ) {
     val trimmedDurationMs: Long
         get() = (trimEndMs - trimStartMs).coerceAtLeast(1000L)
