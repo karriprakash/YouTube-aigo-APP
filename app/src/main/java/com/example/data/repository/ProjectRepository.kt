@@ -2,16 +2,20 @@ package com.example.data.repository
 
 import com.example.data.local.AssetDao
 import com.example.data.local.ProjectDao
+import com.example.data.local.UserVideoDao
 import com.example.data.model.MediaAsset
+import com.example.data.model.UserVideoMetadata
 import com.example.data.model.VideoProject
 import kotlinx.coroutines.flow.Flow
 
 class ProjectRepository(
     private val projectDao: ProjectDao,
-    private val assetDao: AssetDao
+    private val assetDao: AssetDao,
+    private val userVideoDao: UserVideoDao
 ) {
     val allProjects: Flow<List<VideoProject>> = projectDao.getAllProjects()
     val allAssets: Flow<List<MediaAsset>> = assetDao.getAllAssets()
+    val allUserVideos: Flow<List<UserVideoMetadata>> = userVideoDao.getAllVideos()
 
     fun getProjectById(id: Long): Flow<VideoProject?> = projectDao.getProjectById(id)
 
@@ -28,6 +32,27 @@ class ProjectRepository(
     suspend fun insertAsset(asset: MediaAsset): Long = assetDao.insert(asset)
 
     suspend fun deleteAsset(asset: MediaAsset) = assetDao.delete(asset)
+
+    // User-created video metadata management (offline video vault)
+    fun getUserVideoById(id: Long): Flow<UserVideoMetadata?> = userVideoDao.getVideoById(id)
+
+    suspend fun getUserVideoByIdOnce(id: Long): UserVideoMetadata? = userVideoDao.getVideoByIdOnce(id)
+
+    suspend fun insertUserVideo(video: UserVideoMetadata): Long = userVideoDao.insert(video)
+
+    suspend fun updateUserVideo(video: UserVideoMetadata) = userVideoDao.update(video)
+
+    suspend fun deleteUserVideo(video: UserVideoMetadata) = userVideoDao.delete(video)
+
+    suspend fun deleteUserVideoById(id: Long) = userVideoDao.deleteById(id)
+
+    suspend fun deleteUserVideoByPath(filePath: String) = userVideoDao.deleteByFilePath(filePath)
+
+    fun searchUserVideos(query: String): Flow<List<UserVideoMetadata>> = userVideoDao.searchVideosByTitle(query)
+
+    suspend fun getTotalStorageBytes(): Long = userVideoDao.getTotalStorageBytes() ?: 0L
+
+    suspend fun updateVideoSyncStatus(id: Long, isSynced: Boolean) = userVideoDao.updateSyncStatus(id, isSynced)
 
     suspend fun seedInitialDataIfEmpty() {
         if (projectDao.getCount() == 0) {
@@ -180,6 +205,59 @@ class ProjectRepository(
             assetDao.insert(asset2)
             assetDao.insert(asset3)
             assetDao.insert(asset4)
+        }
+
+        if (userVideoDao.getCount() == 0) {
+            val now = System.currentTimeMillis()
+            val video1 = UserVideoMetadata(
+                projectTitle = "హైదరాబాద్ బిర్యానీ సీక్రెట్స్ (Food Vlog)",
+                localFilePath = "/data/user/0/com.example/files/videos/hyderabad_dum_biryani_final.mp4",
+                createdAt = now - 7_200_000L, // 2 hours ago
+                updatedAt = now - 7_200_000L,
+                durationMs = 20_000L,
+                fileSizeBytes = 25_800_000L, // ~24.6 MB
+                resolution = "1080x1920",
+                aspectRatio = "9:16",
+                mimeType = "video/mp4",
+                thumbnailPath = "/data/user/0/com.example/files/thumbnails/biryani_thumb.jpg",
+                isSynced = false,
+                tags = "Food, Biryani, Telugu, Reel",
+                notes = "Rendered with Vibrant filter and Telugu voiceover."
+            )
+            val video2 = UserVideoMetadata(
+                projectTitle = "AI Smart Gadgets 2026 (టెక్ రివ్యూ)",
+                localFilePath = "/data/user/0/com.example/files/videos/ai_smart_gadgets_review.mp4",
+                createdAt = now - 86_400_000L, // 1 day ago
+                updatedAt = now - 86_400_000L,
+                durationMs = 35_000L,
+                fileSizeBytes = 44_200_000L, // ~42.1 MB
+                resolution = "1920x1080",
+                aspectRatio = "16:9",
+                mimeType = "video/mp4",
+                thumbnailPath = "/data/user/0/com.example/files/thumbnails/tech_gadget_thumb.jpg",
+                isSynced = true,
+                tags = "Tech, AI, Telugu, Review",
+                notes = "Cinematic filter, 16:9 YouTube format with chapters."
+            )
+            val video3 = UserVideoMetadata(
+                projectTitle = "చేనేత చీరల కళ (Weaving Heritage)",
+                localFilePath = "/data/user/0/com.example/files/videos/handloom_weaving_heritage.mp4",
+                createdAt = now - 172_800_000L, // 2 days ago
+                updatedAt = now - 172_800_000L,
+                durationMs = 18_500L,
+                fileSizeBytes = 20_800_000L, // ~19.8 MB
+                resolution = "1080x1080",
+                aspectRatio = "1:1",
+                mimeType = "video/mp4",
+                thumbnailPath = "/data/user/0/com.example/files/thumbnails/handloom_thumb.jpg",
+                isSynced = false,
+                tags = "Culture, Handloom, Heritage, Craft",
+                notes = "Vintage color filter with acoustic flute BGM."
+            )
+
+            userVideoDao.insert(video1)
+            userVideoDao.insert(video2)
+            userVideoDao.insert(video3)
         }
     }
 }

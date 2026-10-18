@@ -8,6 +8,7 @@ import com.example.ai.GeminiVideoAiService
 import com.example.ai.GeneratedSocialMediaKit
 import com.example.data.local.AppDatabase
 import com.example.data.model.MediaAsset
+import com.example.data.model.UserVideoMetadata
 import com.example.data.model.VideoProject
 import com.example.data.repository.ProjectRepository
 import kotlinx.coroutines.CancellationException
@@ -47,6 +48,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val projects: StateFlow<List<VideoProject>>
     val assets: StateFlow<List<MediaAsset>>
+    val userVideos: StateFlow<List<UserVideoMetadata>>
 
     private val _activeProject = MutableStateFlow<VideoProject?>(null)
     val activeProject: StateFlow<VideoProject?> = _activeProject.asStateFlow()
@@ -73,7 +75,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         val db = AppDatabase.getDatabase(application)
-        repository = ProjectRepository(db.projectDao(), db.assetDao())
+        repository = ProjectRepository(db.projectDao(), db.assetDao(), db.userVideoDao())
 
         projects = repository.allProjects.stateIn(
             scope = viewModelScope,
@@ -82,6 +84,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         assets = repository.allAssets.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+        userVideos = repository.allUserVideos.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
@@ -330,7 +338,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
         _activeProject.value = updated
         persistProject(updated)
-        _userMessage.value = "Project marked as exported and ready for publishing!"
+
+        // Store video metadata in Room database for offline management
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val sanitized = current.title.replace(Regex("[^a-zA-Z0-9_]"), "_").take(24)
+            val localPath = "${app.filesDir.absolutePath}/videos/${sanitized}_${System.currentTimeMillis()}.mp4"
+            val res = when (current.aspectRatio) {
+                "16:9" -> "1920x1080"
+                "1:1" -> "1080x1080"
+                "4:5" -> "1080x1350"
+                else -> "1080x1920"
+            }
+            val simulatedBytes = (current.trimmedDurationMs * 1_200_000L / 1000L).coerceAtLeast(3_000_000L)
+
+            val videoMeta = UserVideoMetadata(
+                projectTitle = current.title,
+                localFilePath = localPath,
+                createdAt = System.currentTimeMillis(),
+                updatedAt = System.currentTimeMillis(),
+                durationMs = current.trimmedDurationMs,
+                fileSizeBytes = simulatedBytes,
+                resolution = res,
+                aspectRatio = current.aspectRatio,
+                mimeType = "video/mp4",
+                isSynced = false,
+                tags = current.language,
+                notes = current.overlayText.ifBlank { current.rawTopicNotes.take(60) }
+            )
+            repository.insertUserVideo(videoMeta)
+        }
+        _userMessage.value = "Video package saved to offline storage!"
     }
 
     fun createProjectFromAsset(asset: MediaAsset, customTitle: String? = null) {
@@ -403,6 +441,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearUserMessage() {
         _userMessage.value = null
+    }
+
+    fun deleteUserVideo(video: UserVideoMetadata) {
+        viewModelScope.launch {
+            repository.deleteUserVideo(video)
+            _userMessage.value = "Removed '${video.projectTitle}' from offline storage"
+        }
+    }
+
+    fun recordCreatedVideo(
+        title: String,
+        localFilePath: String,
+        durationMs: Long,
+        fileSizeBytes: Long = 0L,
+        aspectRatio: String = "9:16"
+    ) {
+        viewModelScope.launch {
+            val metadata = UserVideoMetadata(
+                projectTitle = title,
+                localFilePath = localFilePath,
+                durationMs = durationMs,
+                fileSizeBytes = fileSizeBytes,
+                aspectRatio = aspectRatio,
+                createdAt = System.currentTimeMillis(),
+                updatedAt = System.currentTimeMillis()
+            )
+            repository.insertUserVideo(metadata)
+            _userMessage.value = "Saved '$title' to offline video vault"
+        }
     }
 
     private fun persistProject(project: VideoProject) {

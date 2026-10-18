@@ -67,10 +67,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.VideoLibrary
 import com.example.data.model.MediaAsset
 import com.example.data.model.VideoProject
+import com.example.data.model.UserVideoMetadata
 import com.example.ui.components.AssetLibrarySection
 import com.example.ui.components.CreateProjectDialog
+import com.example.ui.components.OfflineVideosSection
 import com.example.ui.components.ProjectsListSection
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonIndigo
@@ -89,6 +92,7 @@ fun HomeScreen(
 ) {
     val projects by viewModel.projects.collectAsState()
     val assets by viewModel.assets.collectAsState()
+    val userVideos by viewModel.userVideos.collectAsState()
     val userMessage by viewModel.userMessage.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -265,7 +269,7 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Movie, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Projects (${projects.size})", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Projects (${projects.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     },
                     modifier = Modifier.testTag("tab_projects")
@@ -275,9 +279,21 @@ fun HomeScreen(
                     onClick = { selectedHomeTab = 1 },
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.VideoLibrary, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Saved Videos (${userVideos.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    },
+                    modifier = Modifier.testTag("tab_saved_videos")
+                )
+                Tab(
+                    selected = selectedHomeTab == 2,
+                    onClick = { selectedHomeTab = 2 },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Asset Library (${assets.size})", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Assets (${assets.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     },
                     modifier = Modifier.testTag("tab_assets")
@@ -402,6 +418,11 @@ fun HomeScreen(
                         projects = projects,
                         onSelectProject = onOpenProject,
                         onDeleteProject = { viewModel.deleteProject(it) }
+                    )
+                } else if (selectedHomeTab == 1) {
+                    OfflineVideosSection(
+                        userVideos = userVideos,
+                        onDeleteVideo = { viewModel.deleteUserVideo(it) }
                     )
                 } else {
                     AssetLibrarySection(
